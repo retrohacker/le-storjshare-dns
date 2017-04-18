@@ -1,3 +1,5 @@
+'use strict';
+
 const test = require('tape');
 const spdx = require('spdx');
 const pkg = require('../package.json');

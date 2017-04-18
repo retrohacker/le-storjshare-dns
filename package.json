@@ -1,14 +1,23 @@
 {
   "scripts": {
-    "test": "nyc --reporter=text --reporter=html tape test/*.js",
-    "posttest": "eslint ."
+    "test": "nyc --reporter=text --reporter=html tape test/unit/*.js",
+    "posttest": "eslint .",
+    "integration": "tape test/integration/*.js"
   },
+  "dependencies": {
+    "concurrent-request": "^1.0.2"
+   },
   "devDependencies": {
     "eslint": "3.19.0",
     "eslint-config-airbnb-base": "11.1.2",
     "eslint-plugin-import": "2.2.0",
+    "greenlock": "^2.1.14",
+    "le-store-certbot": "^2.0.5",
+    "mkdirp": "^0.5.1",
     "nyc": "^10.2.0",
+    "rimraf": "^2.6.1",
+    "storj": "github:storj/storj.js",
     "spdx": "^0.5.1",
-    "tape": "4.6.3"
+    "tape": "^4.6.3"
   }
 }

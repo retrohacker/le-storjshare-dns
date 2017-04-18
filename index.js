@@ -2,6 +2,8 @@
 
 const dns = require('dns');
 const Pool = require('concurrent-request');
+const crypto = require('crypto');
+const base64url = require('base64url');
 
 const DEFAULTS = {
   tldService: 'dns.storj.farm',
@@ -11,21 +13,21 @@ const DEFAULTS = {
   requestPoolSize: 1,
   requestRetryCount: 10,
   requestHandler: (e, resp, body, cb) => {
-    if(e) { return cb(e); }
-    if(resp.statusCode === 400 || resp.statusCode === 401) {
+    if (e) { return cb(e); }
+    if (resp.statusCode === 400 || resp.statusCode === 401) {
       // Don't retry on malformed requests
       return cb();
     }
-    if(resp.statusCode !== 200) {return cb(new Error(body.error)); }
+    if (resp.statusCode !== 200) { return cb(new Error(body.error)); }
     return cb();
   },
 };
 
 const m = function StorjShareLE(opts, cb) {
-  if(!(this instanceof StorjShareLE)) {
+  const self = this;
+  if (!(this instanceof StorjShareLE)) {
     return new StorjShareLE(opts, cb);
   }
-  var self = this;
   self.config = Object.assign({}, DEFAULTS, opts);
   // We require a key
   self.key = opts.key;
@@ -52,11 +54,11 @@ const m = function StorjShareLE(opts, cb) {
       value: self.config.ip,
       key: self.key.getPublicKey(),
       signature: self.key.sign(self.config.ip),
-    }
+    },
   }, (e, req, body) => {
-    if(e) { return cb(e); }
-    if(body.error) { return cb(new Error(body.error)); }
-    if(self.subdomain !== body.nodeID) {
+    if (e) { return cb(e); }
+    if (body.error) { return cb(new Error(body.error)); }
+    if (self.subdomain !== body.nodeID) {
       return cb(new Error('invalid key'));
     }
     self.nodeID = body.nodeID;
@@ -64,14 +66,14 @@ const m = function StorjShareLE(opts, cb) {
     // handshake, we can wait for both the A and TXT records to propogate at
     // the same time.
     return cb();
-  })
+  });
 
   return this;
 };
 
 m.prototype.verifyRecord = function verifyRecord(name, type, value, a, cb) {
   const self = this;
-  if(typeof a === 'function') {
+  if (typeof a === 'function') {
     return self.verifyRecord(name, type, value, 0, a);
   }
   // attempt lets us wait for the DNS value to stabalize before calling out to
@@ -81,51 +83,55 @@ m.prototype.verifyRecord = function verifyRecord(name, type, value, a, cb) {
   // Wait for DNS to update, makes sure LE can actually see the value in the
   // handshake.
   return dns.resolve(`${name}.${self.config.domain}`, type, (e, records) => {
-    attempt++;
+    attempt += 1;
     // Keep retrying until it resolves to the proper value
-    if(e || (type === 'A' ? records[0] : records[0][0]) !== value) {
+    if (e || (type === 'A' ? records[0] : records[0][0]) !== value) {
       attempt = 0; // restart
       // Try again in 1 second
     }
 
     // Make sure we see the value consistently for 60 seconds before we ask LE
     // to take a peek
-    if(attempt < 60) {
-      console.log(type, attempt);
+    if (attempt < 60) {
       return setTimeout(
+        // eslint-disable-next-line comma-dangle
         verifyRecord.bind(self), 1000, name, type, value, attempt, cb
       );
     }
     return cb();
   });
-}
+};
 
 m.prototype.set = function set(opts, domain, key, value, cb) {
   const self = this;
+  // Some arbitrary transformation that LE requires for DNS TXT values
+  const digest =
+    base64url(crypto.createHash('sha256').update(value || '').digest());
   self.request({
     url: self.config.tldService,
     method: 'POST',
     json: true,
     body: {
       type: 'TXT',
-      value: value,
+      value: digest,
       key: self.key.getPublicKey(),
-      signature: self.key.sign(value),
+      signature: self.key.sign(digest),
     },
   }, (e, req, body) => {
-    if(e) { return cb(e); }
-    if(body.error) { return cb(new Error(body.error)); }
+    if (e) { return cb(e); }
+    if (body.error) { return cb(new Error(body.error)); }
     // We can provide a valid signature, but the key can belong to the wrong
     // nodeID, which is still an error condition.
-    if(body.nodeID !== self.nodeID) {
+    if (body.nodeID !== self.nodeID) {
       return cb(new Error('Invalid key'));
     }
     // Wait for the TXT record to propogate
-    const name = `_acme-challenge.${self.nodeID}`
-    return self.verifyRecord(name, 'TXT', value, () => {
+    const name = `_acme-challenge.${self.nodeID}`;
+    return self.verifyRecord(name, 'TXT', digest, () =>
       // Wait for the A record to finish propogating
-      return self.verifyRecord(self.nodeID, 'A', self.config.ip, cb);
-    });
+      // eslint-disable-next-line comma-dangle
+      self.verifyRecord(self.nodeID, 'A', self.config.ip, cb)
+    );
   });
 };
 
@@ -146,7 +152,7 @@ m.prototype.remove = function remove(defaults, domain, key, done) {
 
 m.prototype.getOptions = function getOptions() {
   return this.config;
-}
+};
 
 m.prototype.loopback = m.prototype.get;
 

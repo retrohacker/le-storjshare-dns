@@ -1,4 +1,8 @@
 {
+  "name": "le-storjfarm-dns",
+  "description": "greenlock integration for registering certs on the storj.farm domain",
+  "version": "1.0.0",
+  "main": "index.js",
   "scripts": {
     "test": "nyc --reporter=text --reporter=html tape test/unit/*.js",
     "posttest": "eslint .",
@@ -20,5 +24,23 @@
     "storj": "github:storj/storj.js",
     "spdx": "^0.5.1",
     "tape": "^4.6.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/storj/le-storjshare-dns.git"
+  },
+  "keywords": [
+    "storj",
+    "dns",
+    "storj.farm",
+    "lets-encrypt",
+    "acme",
+    "greenlock"
+  ],
+  "author": "William Blankenship <william.jblankenship@gmail.com>",
+  "license": "AGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/storj/le-storjshare-dns/issues"
+  },
+  "homepage": "https://github.com/storj/le-storjshare-dns#readme"
 }

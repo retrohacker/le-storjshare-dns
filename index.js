@@ -90,9 +90,9 @@ m.prototype.verifyRecord = function verifyRecord(name, type, value, a, cb) {
       // Try again in 1 second
     }
 
-    // Make sure we see the value consistently for 60 seconds before we ask LE
+    // Make sure we see the value consistently for 10 seconds before we ask LE
     // to take a peek
-    if (attempt < 60) {
+    if (attempt < 10) {
       return setTimeout(
         // eslint-disable-next-line comma-dangle
         verifyRecord.bind(self), 1000, name, type, value, attempt, cb
